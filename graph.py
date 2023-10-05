@@ -76,6 +76,7 @@ class CFG:
                     print(succ)
             print()
 
+    #load cfg from input json
     def load_from_json(self, json_file):
         with open(json_file, "r") as read_file:
             data = json.load(read_file)
@@ -167,9 +168,12 @@ class CFG:
         while prime != []:
             path = prime.pop(-1)
             res.append(path)
+            to_remove = []
             for subpath in prime:
                 if is_subpath(path, subpath):
-                    prime.remove(subpath)
+                    to_remove.append(subpath)
+            for subpath in to_remove:
+                prime.remove(subpath)
         return res
 
 
@@ -247,12 +251,12 @@ class CFG:
         f = eval(formula)
         solve(f)
 
+    #Loads CFG, list of targets, find paths, make formule and solve it using z3
     def solve (self, json, CC):
         self.load_from_json(json)
         self.get_targets(CC)
         paths = self.short_paths()
         for path in paths:
-           
             formula = self.get_formula(path)
             if pprint:
                 print("Path to check:")
@@ -266,6 +270,6 @@ class CFG:
             if pprint:
                 print()
 
-
-cfg = CFG()
-cfg.solve("json_problem.json", "PPC")
+if __name__ == "__main__":
+    cfg = CFG()
+    cfg.solve("json_problem.json", "PPC")
