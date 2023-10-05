@@ -1,0 +1,53 @@
+{
+    "parameters": [
+        {
+            "type": "Int",
+            "id": "a"
+        },
+        {
+            "type": "Int",
+            "id": "b"
+        }
+    ],
+    "nodes_list":["2","3","4","5"],
+    "initial_node":"2",
+    "terminal_nodes": ["5"],
+    "nodes": [
+        {
+            "name": "2",
+            "succs": [
+                {
+                    "name": "3",
+                    "condition": "a < b"
+                },
+                {
+                    "name": "4",
+                    "condition": "Not(a < b)"
+                }
+            ]
+        },
+        {
+            "name": "3",
+            "succs": [
+                {
+                    "name": "5"
+                }
+            ],
+            "actions":[
+                "a=a+1"
+            ]
+        },
+        {
+            "name": "4",
+            "succs": [
+                {
+                    "name": "5"
+                }
+            ]
+        },
+        {
+            "name": "5"
+        }
+    ]
+
+}

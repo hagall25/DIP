@@ -1,0 +1,82 @@
+{
+    "parameters": [
+        {
+            "type": "Int",
+            "id": "a"
+        }
+    ],
+    "nodes_list":["2","3","4","5","6", "7","8"],
+    "initial_node":"2",
+    "terminal_nodes": ["8"],
+    "nodes": [
+        {
+            "name": "2",
+            "succs": [
+                {
+                    "name": "4"
+                }
+            ],
+            "actions":[
+                "i = 0"
+            ]
+        },
+        {
+            "name": "4",
+            "succs": [
+                {
+                    "name":"3",
+                    "condition": "a <= 2"
+                },
+                {
+                    "name": "5",
+                    "condition": "Not(a <= 2)"
+                }
+            ]
+        },
+        {
+            "name": "3",
+            "succs": [
+                {
+                    "name": "4"
+                }
+            ],
+            "actions":[
+                "i = i + 1",
+                "a = a + 1"
+            ]
+        },
+        {
+            "name": "5",
+            "succs": [
+                {
+                    "name": "6",
+                    "condition":"i > 2"
+                },
+                {
+                    "name": "7",
+                    "condition": "Not (i>2)"
+                }
+            ]
+        },
+        {
+            "name": "6",
+            "succs": [
+                {
+                    "name":"8"
+                }
+            ]
+        },
+        {
+            "name": "7",
+            "succs": [
+                {
+                    "name":"8"
+                }
+            ]
+        },
+        {
+            "name": "8"
+        }
+    ]
+
+}
