@@ -3,17 +3,21 @@
         {
             "type": "Int",
             "id": "a"
+        },
+        {
+            "type": "Int",
+            "id": "b"
         }
     ],
-    "nodes_list":["2","3","4","5","6", "7","8"],
+    "nodes_list":["2","3","4","5","6", "7","8", "9", "10"],
     "initial_node":"2",
-    "terminal_nodes": ["8"],
+    "terminal_nodes": ["10"],
     "nodes": [
         {
             "name": "2",
             "succs": [
                 {
-                    "name": "4"
+                    "name": "6"
                 }
             ],
             "actions":[
@@ -21,14 +25,14 @@
             ]
         },
         {
-            "name": "4",
+            "name": "6",
             "succs": [
                 {
                     "name":"3",
                     "condition": "a <= 2"
                 },
                 {
-                    "name": "5",
+                    "name": "7",
                     "condition": "Not(a <= 2)"
                 }
             ]
@@ -37,7 +41,7 @@
             "name": "3",
             "succs": [
                 {
-                    "name": "4"
+                    "name": "5"
                 }
             ],
             "actions":[
@@ -50,32 +54,57 @@
             "succs": [
                 {
                     "name": "6",
-                    "condition":"i > 10"
+                    "condition":"Not (b <= 2)"
                 },
                 {
-                    "name": "7",
-                    "condition": "Not (i>10)"
+                    "name": "4",
+                    "condition": "b<=2"
                 }
             ]
         },
         {
-            "name": "6",
+            "name": "4",
             "succs": [
                 {
-                    "name":"8"
+                    "name":"5"
                 }
+            ],
+            "actions":[
+                "i = i + 1",
+                "b = b + 1"
             ]
         },
         {
             "name": "7",
             "succs": [
                 {
-                    "name":"8"
+                    "name":"8",
+                    "condition":"i > 10"
+                },
+                {
+                    "name":"9",
+                    "condition":"Not(i > 10)"
                 }
             ]
         },
         {
-            "name": "8"
+            "name": "8",
+            "succs":[
+                {
+                    "name":"10"
+                }
+            ]
+        },
+        {
+            "name": "9",
+            "succs":[
+                {
+                    "name":"10"
+                }
+            ]
+        },
+        {
+            "name": "10"
         }
     ]
 
