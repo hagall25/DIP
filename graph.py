@@ -2,6 +2,8 @@ import json
 from z3 import *
 import parse
 import copy
+import networkx as nx
+from typing import Type
 
 pprint = True
 
@@ -48,9 +50,15 @@ class Node:
         self.initial = False
         self.terminal = False
         self.succs = set()
+        self.transition_label = {}
+
+    def remove_succ(self, node_name):
+        self.succs.remove(node_name)
+        self.transition_label.pop(node_name)
     
     def add_succ(self, node):
         self.succs.add(node)
+        self.transition_label[node] = node
 
     def set_initial(self):
         self.initial = True
@@ -92,6 +100,53 @@ class CFG:
                 for succ in node.succs:
                     print(succ)
             print()
+
+    def get_predecessors(self, graph, target):
+        predecessors = []
+        for node in graph.nodes:
+            for succ in node.succs:
+                if succ == target.name:
+                    predecessors.append(node.name)
+        return predecessors
+    
+    def path_regex(self, p:Node, q:Node, k:Node):
+        path_regex = ""
+        if q.name in p.succs:
+            path_regex = "(" + p.transition_label[q.name] + ")" + "+" + "("
+        if k.name in p.succs:
+            path_regex += (p.transition_label[k.name] + " ")
+        if(k.name in k.succs):
+            path_regex += ("(" + k.transition_label[k.name] + ")*")
+        if q.name in k.succs:
+            path_regex += (" " + k.transition_label[q.name])
+        if q.name in p.succs:
+            path_regex+=")"
+        return path_regex
+    
+    def get_regex(self):
+        graph = copy.deepcopy(self)
+        while len(graph.nodes) > 2:
+            for node in graph.nodes:
+                if not node.initial and not node.terminal:
+                    node_copy = copy.deepcopy(node)
+                    preds = self.get_predecessors(graph, node)
+                    node_succs = copy.deepcopy(node_copy.succs)
+                    for pre in preds:
+                        if pre != node.name:
+                            for succ in node_succs:
+                                pred = graph.get_node(pre)
+                                path_reg = self.path_regex(pred, graph.get_node(succ), node_copy)
+                                pred.add_succ(succ)
+                                pred.transition_label[succ] = path_reg
+                            pred.remove_succ(node_copy.name)
+                    graph.nodes.remove(node)
+                    break
+        for node in graph.nodes:
+            print()
+            print(node.name + " ")
+            print(node.transition_label)
+            
+                    
 
     #load cfg from input json
     def load_from_json(self, json_file):
@@ -347,9 +402,30 @@ class CFG:
                     decisions[make_tuple(curr_path)][curr_node] += 1
                     number_of_takes[curr_path[-1]][curr_node] += 1
                 curr_path.append(self.get_node(curr_node))
-                
 
-    
+
+    def cycle_paths(self, max_iterations):
+        #target = self.targets.pop(0)
+        g =  nx.DiGraph()
+        for node in self.nodes:
+            g.add_node(node.name)
+        for node in self.nodes:
+            for succ in node.succs:
+                g.add_edge(node.name, succ)
+        cycles = list(nx.simple_cycles(g))
+        print(cycles)
+        return
+        curr_path = [self.get_init_node()]
+        curr_node = curr_path[-1]
+        curr_target = target.copy()
+        while True:
+            if curr_target != [] and curr_node == curr_target[0]:
+                curr_target.pop(0)
+            if curr_target == [] and curr_node == self.get_term_node:
+                for node in curr_path:
+                    for cycle in cycles:
+                        pass
+
     #From given path makes formula to check by Z3
     #For assignments update variables with values in symbols and update values in symbols.
     #For conditions update variables with values in symbols and add to formula
@@ -386,6 +462,10 @@ class CFG:
     #Loads CFG, list of targets, find paths, make formule and solve it using z3
     def solve (self, json, CC, method = "SP"):
         self.load_from_json(json)
+        self.print_graph()
+        self.get_regex()
+        #self.print_graph()
+        self.cycle_paths(0)
         self.get_targets(CC)
         if method == "BF":
             for i in range(len(self.targets)):
@@ -413,4 +493,4 @@ class CFG:
 
 if __name__ == "__main__":
     cfg = CFG()
-    cfg.solve("json_problem.json", "PPC", "BF")
+    cfg.solve("json_problem2.json", "PPC", "BF")

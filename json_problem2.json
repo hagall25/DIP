@@ -79,11 +79,11 @@
             "succs": [
                 {
                     "name":"8",
-                    "condition":"i > 10"
+                    "condition":"i > 3"
                 },
                 {
                     "name":"9",
-                    "condition":"Not(i > 10)"
+                    "condition":"Not(i > 3)"
                 }
             ]
         },
