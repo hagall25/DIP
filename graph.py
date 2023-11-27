@@ -37,6 +37,151 @@ def make_tuple(node_list):
             name_list.append(node.name)
         return tuple(name_list)
 
+class Literal:
+    def __init__(self, value):
+        self.value = value
+
+    def isEmpty(self):
+        if len(self.value) == 0:
+            return True
+        else:
+            return False
+        
+    def toString(self):
+        return self.value
+    
+    def getPrefix(self):
+        return self.value
+    
+    def getPosfix(self):
+        return self.value
+        
+class Concatenation:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def toString(self):
+        a_str = None
+        b_str = None
+        if type(self.a) == str:
+            a_str = self.a
+        else:
+            a_str = self.a.toString()
+        if type(self.b) == str:
+            b_str = self.b
+        else:
+            b_str = self.b.toString()
+        return a_str + b_str
+    
+    def getPrefix(self):
+        if isinstance(self.a, Literal) or isinstance(self.a, Concatenation):
+            return self.a.getPrefix()
+        
+    def getPosfix(self):
+        if isinstance(self.b, Literal) or isinstance(self.b, Concatenation):
+            return self.b.getPosfix()
+
+
+class Repetition:
+    def __init__(self, value):
+        self.value = value
+
+    def toString(self):
+        return "(" + self.value.toString() + ")*"
+
+class Alternation:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def toString(self):
+        return "(" + self.a.toString() +"+"+ self.b.toString() + ")"
+
+def get_common_prefix(a, b):
+    a_str = None
+    if isinstance(a, Literal) or isinstance(a, Concatenation):
+        a_str = a.getPrefix()
+    b_str = None
+    if isinstance(b, Literal) or isinstance(b, Concatenation):
+        b_str = b.getPrefix()
+    if a_str == None or b_str == None:
+        return None
+    i = 0
+    ret = ''
+    for letter in a_str:
+        if letter == b_str[i]:
+            ret += letter
+            i+=1
+        else:
+            break
+    if ret == '':
+        return None
+    else:
+        return (a_str[i:], b_str[i:], ret)
+    
+def get_common_posfix(a, b):
+    a_str = None
+    if isinstance(a, Literal) or isinstance(a, Concatenation):
+        a_str = a.getPosfix()
+    b_str = None
+    if isinstance(b, Literal) or isinstance(b, Concatenation):
+        b_str = b.getPosfix()
+    if a_str == None or b_str == None:
+        return None
+    i = len(b_str)-1
+    ret = ''
+    for letter in a_str[:-1]:
+        if letter == b_str[i]:
+            ret += letter
+            i = i-1
+        else:
+            break
+    if ret == '':
+        return None
+    else:
+        return (a_str[:i], b_str[:i], ret[-1])
+
+
+def union(a, b):
+    if a != None and b!= None and a!=b:
+        res = get_common_prefix(a, b)
+        if res!=None:
+            (ap, bp , start) = res
+            return Concatenation(Literal(start), Alternation(ap,bp))
+        
+        res = get_common_posfix(a, b)
+        if res!=None:
+            (ap, bp , end) = res
+            return Concatenation(Alternation(ap,bp),Literal(end))
+        return Alternation(a, b)
+    elif a == None:
+        return b
+    else:
+        return a
+    
+def concat(a, b):
+    if a == None or b == None:
+        return None
+    if isinstance(a, Literal) and a.isEmpty():
+        return b
+    if isinstance(b, Literal) and b.isEmpty():
+        return a
+    
+    if isinstance(a, Literal) and isinstance(b, Literal):
+        return Literal(a.value+b.value)
+    if isinstance(a, Literal) and isinstance(b, Concatenation) and isinstance(b.a, Literal):
+        return Concatenation(a.value+b.a.value, b.b)
+    if isinstance(b, Literal) and isinstance(a, Concatenation) and isinstance(a.b, Literal):
+        return Concatenation(a.a, a.b.value+b.value)
+    return Concatenation(a, b)
+
+def star(exp):
+    if exp == None or (isinstance(exp, Literal) and exp.isEmpty()):
+        return exp
+    else:
+        return Repetition(exp)
+        
 
 #Node class
 #Parameters:
@@ -146,6 +291,37 @@ class CFG:
             print(node.name + " ")
             print(node.transition_label)
             
+    def brzozowski(self):
+        b = {}
+        a = {}
+        for node in self.nodes:
+            if node.terminal:
+                b[node.name] = Literal('')
+            else:
+                b[node.name] = None
+            for bnode in self.nodes:
+                a[(node.name, bnode.name)] = None
+            for succ in node.succs:
+                a[(node.name, succ)] = Literal(succ)
+        nodesList = []
+        nodesList.append(self.get_init_node())
+        for node in self.nodes:
+            if not node.initial or node.terminal:
+                nodesList.append(node)
+        nodesList.append(self.get_term_node())
+        for node in reversed(nodesList):
+            if a[(node.name, node.name)] != None:
+                b[node.name] = concat(star(a[(node.name, node.name)]), b[node.name])
+                for jnode in nodesList:
+                    a[(node.name, jnode.name)] = concat(star(a[(node.name, node.name)]), a[(node.name, jnode.name)])
+            
+            for inode in nodesList:
+                if a[(inode.name, node.name)] != None:
+                    b[inode.name] = union(b[inode.name], concat(a[(inode.name, node.name)], b[node.name]))
+                    for jnode in nodesList:
+                        a[(inode.name, jnode.name)] = union(a[(inode.name, jnode.name)], concat(a[(inode.name, node.name)], a[(node.name, jnode.name)]))
+        print(b[self.get_init_node().name].toString())
+        return b[self.get_term_node().name].toString()
                     
 
     #load cfg from input json
@@ -463,7 +639,8 @@ class CFG:
     def solve (self, json, CC, method = "SP"):
         self.load_from_json(json)
         self.print_graph()
-        self.get_regex()
+        self.brzozowski()
+        #self.get_regex()
         #self.print_graph()
         self.cycle_paths(0)
         self.get_targets(CC)
