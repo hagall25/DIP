@@ -206,7 +206,7 @@ def get_common_posfix(a, b):
 def union(a, b):
     if a != None and b!= None and a!=b:
         print("a : " + a.toString())
-        print("b : " b.toString())
+        print("b : " + b.toString())
         starta = None
         endb = None
         res = None
@@ -245,7 +245,7 @@ def union(a, b):
             res = Concatenation(Literal(start), res)
         if(endb != None):
             res = Concatenation(res, Literal(endb))
-        print("res : " + res.print(a.toString()))
+        print("res : " + res.toString())
         return res
     
     elif a == None:
