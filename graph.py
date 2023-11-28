@@ -39,6 +39,8 @@ def make_tuple(node_list):
 
 class Literal:
     def __init__(self, value):
+        if isinstance(value, Literal):
+            self.value = value.value
         self.value = value
 
     def isEmpty(self):
@@ -176,6 +178,73 @@ def get_common_prefix(a, b):
         b = remove_prefix(b, ret)
         return (a, b, ret)
     
+def is_identical(a, b):
+    if (isinstance(a, Literal) and isinstance(b, Literal)):
+        return a.value == b.value
+    elif (isinstance(a, Repetition) and isinstance(b, Repetition)):
+        return is_identical(a.value, b.value)
+    elif (isinstance(a, Concatenation) and isinstance(b, Concatenation)) or (isinstance(a, Alternation) and isinstance(b, Alternation)):
+        return is_identical(a.a, b.a) and is_identical(a.b,b.b)
+    else:
+        return False
+
+def get_deepest(regex, side = "left"):
+    
+    if isinstance(regex, Literal) or isinstance(regex, Repetition) or isinstance(regex, Alternation) or isinstance(regex, str):
+        if(isinstance(regex, str)):
+            return Literal(regex)
+        return regex
+    else:
+        if(side == "left"):
+            return get_deepest(regex.a, side)
+        else:
+            return get_deepest(regex.b, side)
+        
+def remove_deepest(regex, side = "left"):
+    if isinstance(regex, Literal) or isinstance(regex, Repetition) or isinstance(regex, Alternation):
+        return Literal('')
+    else:
+        if(side == "left"):
+            if isinstance(regex.a, Literal) or isinstance(regex.a, Repetition) or isinstance(regex.a, Alternation):
+                return regex.b
+            else:
+                return Concatenation(remove_deepest(regex.a, side), regex.b)
+        else:
+            if isinstance(regex.b, Literal) or isinstance(regex.b, Repetition) or isinstance(regex.b, Alternation):
+                return regex.a
+            else:
+                return Concatenation(regex.a,remove_deepest(regex.b, side))
+        
+def get_posfix(a, b):
+    deepest_a = get_deepest(a, "right")
+    deepest_b = get_deepest(b, "right")
+    ret = None
+    if is_identical(deepest_a, deepest_b):
+        a = remove_deepest(a, "right")
+        b = remove_deepest(b, "right")
+        (a, b, ret) = get_posfix(a, b)
+        if ret != None:
+            ret = Concatenation(ret, deepest_a)
+        else:
+            ret = deepest_a
+    return (a,b,ret)
+
+def get_prefix(a, b):
+    deepest_a = get_deepest(a)
+    deepest_b = get_deepest(b)
+    ret = None
+    if is_identical(deepest_a, deepest_b):
+        a = remove_deepest(a)
+        b = remove_deepest(b)
+        (a, b, ret) = get_prefix(a, b)
+        if ret != None:
+            ret = Concatenation(deepest_a, ret)
+        else:
+            ret = deepest_a
+    return (a,b,ret)
+    
+
+
 def get_common_posfix(a, b):
     a_str = None
     if isinstance(a, Literal) or isinstance(a, Concatenation):
@@ -205,29 +274,32 @@ def get_common_posfix(a, b):
 
 def union(a, b):
     if a != None and b!= None and a!=b:
+        
         print("a : " + a.toString())
         print("b : " + b.toString())
-        starta = None
-        endb = None
-        res = None
-        resa = get_common_prefix(a, b)
-        if resa != None:
-            (ap, bp , start) = resa
-            a = ap
-            b = bp
-            starta = start
-        resb = get_common_posfix(a, b)
-        if resb != None:
-            (ap, bp , end) = resb
-            a = ap
-            b = bp
-            endb = end
+        (a,b,start) = get_prefix(a,b)
+        (a,b,end) = get_posfix(a, b)
+        # starta = None
+        # endb = None
+        # res = None
+        # resa = get_common_prefix(a, b)
+        # if resa != None:
+        #     (ap, bp , start) = resa
+        #     a = ap
+        #     b = bp
+        #     starta = start
+        # resb = get_common_posfix(a, b)
+        # if resb != None:
+        #     (ap, bp , end) = resb
+        #     a = ap
+        #     b = bp
+        #     endb = end
 
         if isinstance(a, Literal) and a.isEmpty() and isinstance(b, Literal) and b.isEmpty():
             string = ''
-            if starta != None:
+            if start != None:
                 string += start
-            if endb != None:
+            if end != None:
                 string += end
             res = Literal(string)
         elif isinstance(a, Literal) and a.isEmpty():
@@ -241,10 +313,10 @@ def union(a, b):
         else:
             res = Alternation(a,b)
         
-        if(starta!= None):
-            res = Concatenation(Literal(start), res)
-        if(endb != None):
-            res = Concatenation(res, Literal(endb))
+        if(start!= None):
+            res = Concatenation(start, res)
+        if(end != None):
+            res = Concatenation(res, end)
         print("res : " + res.toString())
         return res
     
