@@ -84,11 +84,18 @@ class Concatenation:
 
 
 class Repetition:
-    def __init__(self, value):
+    def __init__(self, value, opt = '*'):
         self.value = value
+        self.opt = opt
 
     def toString(self):
-        return "(" + self.value.toString() + ")*"
+        return "(" + self.value.toString() + ")" + self.opt
+    
+    def isOpt(self):
+        if self.opt == '*':
+            return False
+        else:
+            return True
 
 class Alternation:
     def __init__(self, a, b):
@@ -96,7 +103,52 @@ class Alternation:
         self.b = b
 
     def toString(self):
-        return "(" + self.a.toString() +"+"+ self.b.toString() + ")"
+        a_str = None
+        b_str = None
+        if type(self.a) == str:
+            a_str = self.a
+        else:
+            a_str = self.a.toString()
+        if type(self.b) == str:
+            b_str = self.b
+        else:
+            b_str = self.b.toString()
+        return "(" + a_str +"+"+ b_str + ")"
+
+def print_regex(regex):
+      if isinstance(regex, str):
+          print(regex)
+      elif isinstance(regex, Literal):
+          print(regex.toString())
+      elif isinstance(regex, Repetition):
+          print_regex(regex.value)
+      elif isinstance(regex, Concatenation) or isinstance(regex, Alternation):
+          print_regex(regex.a)
+          print_regex(regex.b)
+      
+def remove_prefix(regex, prefix):
+    if isinstance(regex, Literal):
+        if prefix == regex.value:
+            return Literal('')
+        else:
+            return Literal(regex.value[len(prefix):])
+    elif isinstance(regex, Concatenation):
+        a = remove_prefix(regex.a, prefix)
+        if isinstance(a, Literal) and a.isEmpty():
+            return regex.b
+        return Concatenation(remove_prefix(regex.a, prefix), regex.b)
+    
+def remove_posfix(regex, posfix):
+    if isinstance(regex, Literal):
+        if posfix == regex.value:
+            return Literal('')
+        else:
+            return Literal(regex.value[:-len(posfix)])
+    elif isinstance(regex, Concatenation):
+        b = remove_posfix(regex.b, posfix)
+        if isinstance(b, Literal) and b.isEmpty():
+            return regex.a
+        return Concatenation(regex.a, remove_posfix(regex.b, posfix))
 
 def get_common_prefix(a, b):
     a_str = None
@@ -110,15 +162,19 @@ def get_common_prefix(a, b):
     i = 0
     ret = ''
     for letter in a_str:
-        if letter == b_str[i]:
-            ret += letter
-            i+=1
-        else:
-            break
+        if i < len(b_str):
+            if letter == b_str[i]:
+                ret += letter
+                i+=1
+            else:
+                break
+        
     if ret == '':
         return None
     else:
-        return (a_str[i:], b_str[i:], ret)
+        a = remove_prefix(a, ret)
+        b = remove_prefix(b, ret)
+        return (a, b, ret)
     
 def get_common_posfix(a, b):
     a_str = None
@@ -131,34 +187,85 @@ def get_common_posfix(a, b):
         return None
     i = len(b_str)-1
     ret = ''
-    for letter in a_str[:-1]:
+    rev_a = a_str[::-1]
+    for letter in rev_a:
         if letter == b_str[i]:
             ret += letter
             i = i-1
         else:
             break
+    i+=1
     if ret == '':
         return None
     else:
-        return (a_str[:i], b_str[:i], ret[-1])
+        a = remove_posfix(a, ret[::-1])
+        b = remove_posfix(b, ret[::-1])
+        return (a, b, ret[::-1])
 
 
 def union(a, b):
     if a != None and b!= None and a!=b:
-        res = get_common_prefix(a, b)
-        if res!=None:
-            (ap, bp , start) = res
-            return Concatenation(Literal(start), Alternation(ap,bp))
+        print("a : " + a.toString())
+        print("b : " b.toString())
+        starta = None
+        endb = None
+        res = None
+        resa = get_common_prefix(a, b)
+        if resa != None:
+            (ap, bp , start) = resa
+            a = ap
+            b = bp
+            starta = start
+        resb = get_common_posfix(a, b)
+        if resb != None:
+            (ap, bp , end) = resb
+            a = ap
+            b = bp
+            endb = end
+
+        if isinstance(a, Literal) and a.isEmpty() and isinstance(b, Literal) and b.isEmpty():
+            string = ''
+            if starta != None:
+                string += start
+            if endb != None:
+                string += end
+            res = Literal(string)
+        elif isinstance(a, Literal) and a.isEmpty():
+            res =  Repetition(b, '?')
+        elif isinstance(b, Literal) and b.isEmpty():
+            res = Repetition(a, '?')
+        elif isinstance(a, Repetition) and a.isOpt:
+            res = Repetition(Alternation(a.value, b), '?')
+        elif isinstance(b, Repetition) and b.isOpt:
+            res = Repetition(Alternation(a, b.value), '?')
+        else:
+            res = Alternation(a,b)
         
-        res = get_common_posfix(a, b)
-        if res!=None:
-            (ap, bp , end) = res
-            return Concatenation(Alternation(ap,bp),Literal(end))
-        return Alternation(a, b)
+        if(starta!= None):
+            res = Concatenation(Literal(start), res)
+        if(endb != None):
+            res = Concatenation(res, Literal(endb))
+        print("res : " + res.print(a.toString()))
+        return res
+    
     elif a == None:
         return b
     else:
         return a
+    #     res = get_common_posfix(a, b)
+    #     if res!=None:
+    #         (ap, bp , end) = res
+    #         if isinstance(ap, Literal) and ap.isEmpty():
+    #             return Concatenation(Repetition(bp, '?'), Literal(end))
+    #         if isinstance(bp, Literal) and bp.isEmpty():
+    #             return Concatenation(Repetition(ap, '?'), Literal(end))
+    #         if isinstance(ap, Repetition) and ap.isOpt:
+    #             return Concatenation(Repetition(Alternation(ap.value, bp), '?'), Literal(end))
+    #         if isinstance(bp, Repetition) and bp.isOpt:
+    #             return Concatenation(Repetition(Alternation(ap, bp.value), '?'), Literal(end))
+    #         return Concatenation(Alternation(ap,bp),Literal(end))
+    #     return Alternation(a, b)
+    
     
 def concat(a, b):
     if a == None or b == None:
@@ -306,22 +413,27 @@ class CFG:
         nodesList = []
         nodesList.append(self.get_init_node())
         for node in self.nodes:
-            if not node.initial or node.terminal:
+            if not node.initial and not node.terminal:
                 nodesList.append(node)
         nodesList.append(self.get_term_node())
-        for node in reversed(nodesList):
+        for n in range(len(nodesList)-1,-1,-1):
+            node = nodesList[n]
             if a[(node.name, node.name)] != None:
                 b[node.name] = concat(star(a[(node.name, node.name)]), b[node.name])
-                for jnode in nodesList:
+                for j in range(0, n):
+                    jnode = nodesList[j]
                     a[(node.name, jnode.name)] = concat(star(a[(node.name, node.name)]), a[(node.name, jnode.name)])
             
-            for inode in nodesList:
+            for i in range(0, n):
+                inode = nodesList[i]
                 if a[(inode.name, node.name)] != None:
                     b[inode.name] = union(b[inode.name], concat(a[(inode.name, node.name)], b[node.name]))
-                    for jnode in nodesList:
+                    for j in range(0, n):
+                        jnode = nodesList[j]
                         a[(inode.name, jnode.name)] = union(a[(inode.name, jnode.name)], concat(a[(inode.name, node.name)], a[(node.name, jnode.name)]))
         print(b[self.get_init_node().name].toString())
-        return b[self.get_term_node().name].toString()
+        #print_regex(b[self.get_init_node().name])
+        return b[self.get_init_node().name]
                     
 
     #load cfg from input json
@@ -638,7 +750,7 @@ class CFG:
     #Loads CFG, list of targets, find paths, make formule and solve it using z3
     def solve (self, json, CC, method = "SP"):
         self.load_from_json(json)
-        self.print_graph()
+        #self.print_graph()
         self.brzozowski()
         #self.get_regex()
         #self.print_graph()
