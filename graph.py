@@ -134,7 +134,7 @@ def print_regex(regex):
           print_regex(regex.a)
           print_regex(regex.b)
 
-#Removes given prefix from regex 
+#Removes given prefix from regex unused
 def remove_prefix(regex, prefix):
     if isinstance(regex, Literal):
         if prefix == regex.value:
@@ -145,9 +145,9 @@ def remove_prefix(regex, prefix):
         a = remove_prefix(regex.a, prefix)
         if isinstance(a, Literal) and a.isEmpty():
             return regex.b
-        return Concatenation(remove_prefix(regex.a, prefix), regex.b)
+        return Concatenation(a, regex.b)
     
-#Removes given posfix from regex 
+#Removes given posfix from regex unused
 def remove_posfix(regex, posfix):
     if isinstance(regex, Literal):
         if posfix == regex.value:
@@ -158,7 +158,7 @@ def remove_posfix(regex, posfix):
         b = remove_posfix(regex.b, posfix)
         if isinstance(b, Literal) and b.isEmpty():
             return regex.a
-        return Concatenation(regex.a, remove_posfix(regex.b, posfix))
+        return Concatenation(regex.a, b)
 
 #Gets literal prefix, unused
 def get_common_prefix(a, b):
@@ -221,12 +221,12 @@ def remove_deepest(regex, side = "left"):
             if isinstance(regex.a, Literal) or isinstance(regex.a, Repetition) or isinstance(regex.a, Alternation):
                 return regex.b
             else:
-                return Concatenation(remove_deepest(regex.a, side), regex.b)
+                return concat(remove_deepest(regex.a, side), regex.b)
         else:
             if isinstance(regex.b, Literal) or isinstance(regex.b, Repetition) or isinstance(regex.b, Alternation):
                 return regex.a
             else:
-                return Concatenation(regex.a,remove_deepest(regex.b, side))
+                return concat(regex.a,remove_deepest(regex.b, side))
 
 #For two regexes a,b in form of aa.x and bb.x returns (aa, bb, x)  
 def get_posfix(a, b):
@@ -296,28 +296,6 @@ def union(a, b):
         # print("b : " + b.toString())
         (a,b,start) = get_prefix(a,b)
         (a,b,end) = get_posfix(a, b)   #Get common prefix and sufix
-        # print("Conversion")
-        # print("a : " + a.toString())
-        # print("b : " + b.toString())
-        # if start!=None:
-        #     print("start : " + start.toString())
-        # if end != None:
-        #     print("end : " + end.toString())
-        # starta = None
-        # endb = None
-        # res = None
-        # resa = get_common_prefix(a, b)
-        # if resa != None:
-        #     (ap, bp , start) = resa
-        #     a = ap
-        #     b = bp
-        #     starta = start
-        # resb = get_common_posfix(a, b)
-        # if resb != None:
-        #     (ap, bp , end) = resb
-        #     a = ap
-        #     b = bp
-        #     endb = end
 
         if isinstance(a, Literal) and a.isEmpty() and isinstance(b, Literal) and b.isEmpty():  #a and b identical
             string = ''
@@ -338,9 +316,9 @@ def union(a, b):
                 res =  Repetition(a, '?')
             res = Repetition(a, '?')
         elif isinstance(a, Repetition) and a.isOpt:
-            res = Repetition(Alternation(a.value, b), '?')
+            res = Repetition(union(a.value, b), '?')
         elif isinstance(b, Repetition) and b.isOpt:
-            res = Repetition(Alternation(a, b.value), '?')
+            res = Repetition(union(a, b.value), '?')
         else:
             res = Alternation(a,b)
         
@@ -348,26 +326,12 @@ def union(a, b):
             res = Concatenation(start, res)
         if(end != None):
             res = Concatenation(res, end)
-        # print("res : " + res.toString())
         return res
     
     elif a == None:
         return b
     else:
         return a
-    #     res = get_common_posfix(a, b)
-    #     if res!=None:
-    #         (ap, bp , end) = res
-    #         if isinstance(ap, Literal) and ap.isEmpty():
-    #             return Concatenation(Repetition(bp, '?'), Literal(end))
-    #         if isinstance(bp, Literal) and bp.isEmpty():
-    #             return Concatenation(Repetition(ap, '?'), Literal(end))
-    #         if isinstance(ap, Repetition) and ap.isOpt:
-    #             return Concatenation(Repetition(Alternation(ap.value, bp), '?'), Literal(end))
-    #         if isinstance(bp, Repetition) and bp.isOpt:
-    #             return Concatenation(Repetition(Alternation(ap, bp.value), '?'), Literal(end))
-    #         return Concatenation(Alternation(ap,bp),Literal(end))
-    #     return Alternation(a, b)
     
 #Simplify conacatenation
 def concat(a, b):
@@ -394,11 +358,11 @@ def concat(a, b):
             return a
 
     if isinstance(a, Literal) and isinstance(b, Literal):
-        return Literal(a.value+b.value)
+        return Literal(a.value+' '+b.value)
     if isinstance(a, Literal) and isinstance(b, Concatenation) and isinstance(b.a, Literal):
-        return Concatenation(a.value+b.a.value, b.b)
+        return Concatenation(a.value+' '+b.a.value, b.b)
     if isinstance(b, Literal) and isinstance(a, Concatenation) and isinstance(a.b, Literal):
-        return Concatenation(a.a, a.b.value+b.value)
+        return Concatenation(a.a, a.b.value+' '+b.value)
     return Concatenation(a, b)
 
 #Repetition
@@ -420,7 +384,7 @@ class Node:
         self.name = name
         self.initial = False
         self.terminal = False
-        self.succs = set()
+        self.succs = []
         self.transition_label = {}
 
     def remove_succ(self, node_name):
@@ -428,7 +392,8 @@ class Node:
         self.transition_label.pop(node_name)
     
     def add_succ(self, node):
-        self.succs.add(node)
+        if not node in self.succs:
+            self.succs.append(node)
         self.transition_label[node] = node
 
     def set_initial(self):
@@ -448,8 +413,8 @@ class Node:
 class CFG:
     def __init__(self, nodes = None) -> None:
         if nodes != None:
-            self.nodes = set(nodes)
-        self.nodes = set()
+            self.nodes = nodes
+        self.nodes = []   #Might be set, but to make it deterministic, its list
         self.targets = []
         self.conditions = {}
         self.actions = []
@@ -457,7 +422,9 @@ class CFG:
         self.symbols = {}
     
     def add_node(self, node):
-        self.nodes.add(node)
+        if not node in self.nodes:
+            self.nodes.append(node)
+        
 
     def print_graph(self):
         for node in self.nodes:
@@ -520,7 +487,6 @@ class CFG:
 
     # Brzozowski algebraic method FA -> RE
     # https://cs.stackexchange.com/questions/2016/how-to-convert-finite-automata-to-regular-expressions/2395#2395
-    # todo states 9+
     def brzozowski(self):
         b = {}
         a = {}
@@ -535,11 +501,6 @@ class CFG:
                 a[(node.name, succ)] = Literal(succ)
         nodesList = []
         nodesList.append(self.get_init_node())
-
-        # debug = ['3','6','5','7','4']
-        # for name in debug:
-        #     nodesList.append(self.get_node(name))
-        #     print(name)
 
         for node in self.nodes:
             if not node.initial and not node.terminal:
@@ -912,4 +873,4 @@ class CFG:
 
 if __name__ == "__main__":
     cfg = CFG()
-    cfg.solve("json_problem.json", "PPC", "BF")
+    cfg.solve("json_problem2.json", "PPC", "BF")
