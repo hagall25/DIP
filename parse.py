@@ -22,7 +22,7 @@ operand = integer | variable
 signop = oneOf("+ -")
 multop = oneOf("* /")
 plusop = oneOf("+ -")
-boolop = oneOf("And Or || &&")
+boolop = oneOf("And Or || && ,")
 neqop = oneOf("Not !")
 eqop = oneOf('= == <= >= < > !=')
 
@@ -105,6 +105,23 @@ def parse(expression, symbols):
     a = expr.parseString(expression)
     parsed, sym =  parse_expr(a, symbols)
     return toStr(parsed), sym
+
+def symb(parsed):
+    res = []
+    if isinstance(parsed, str):
+        if parsed == variable and parsed != boolop and parsed != neqop:
+            res.append(parsed)
+    elif(isinstance(parsed, list)):
+        for par in parsed:
+            for sym in symb(par):
+                res.append(sym)
+    return res
+
+def get_symbols(expression, symbols):
+    a = expr.parseString(expression)
+    parsed, sym =  parse_expr(a, symbols)
+    res = symb(parsed)
+    return res
 
 
 #test = [
