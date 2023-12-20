@@ -390,7 +390,18 @@ def substitude(regex):
 def visualize(regex):
     global label
     label = 0
-    dot = graphviz.Digraph('regex', comment='regex viz')
+    dot = graphviz.Digraph('alg', comment='regex viz')
     add_nodes(dot, regex)
     dot.render()
     #print(dot.source)
+
+if __name__ == "__main__":
+    one = Literal('1')
+    two = Literal ('2')
+    three = Literal ('3')
+    four = Literal ('4 5')
+    rep = Repetition(two, '+')
+    con = Concatenation(one, rep)
+    alt = Alternation(three, four)
+    root = Concatenation(con, alt)
+    visualize(root)

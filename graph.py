@@ -561,6 +561,52 @@ class Path:
         self.path.append(node)
 
 
+def num_of_nodes(chain:str):
+    if chain == '':
+        return 0
+    arr = chain.split(' ')
+    return len(arr)
+    
+
+def get_length(regex):
+    if isinstance(regex, Path):
+        regex = regex.path
+    res = 0
+    for elem in regex:
+        if isinstance(elem, str):
+            res += num_of_nodes(elem)
+        elif isinstance(elem, Decision):
+            lena = get_length(elem.a)
+            lenb = get_length(elem.b)
+            if(lena > lenb):
+                res += lenb
+            else:
+                res += lena
+        elif isinstance(elem, Cycle):
+            res += get_length(elem.value)
+    return res
+
+def get_shortest_path(regex):
+    if isinstance(regex, Path):
+        regex = regex.path
+    res = ''
+    for elem in regex:
+        if isinstance(elem, str):
+            res += ' ' + elem
+        elif isinstance(elem, Decision):
+            lena = get_length(elem.a)
+            lenb = get_length(elem.b)
+            if(lena > lenb):
+                res += ' ' + get_shortest_path(elem.b)
+            else:
+                res += ' ' + get_shortest_path(elem.a)
+        elif isinstance(elem, Cycle):
+            res += ' ' + get_shortest_path(elem.value)
+    if res == '':
+        return ''
+    else:
+        return res[1:]
+
 class RegexSolver:
     def __init__(self, graph:CFG, regex, targets):
         self.graph = graph
@@ -630,7 +676,7 @@ class RegexSolver:
                 else:
                     print("Ani jedna dobre :D")
         pass
-    
+
 
 
 if __name__ == "__main__":
@@ -645,4 +691,6 @@ if __name__ == "__main__":
     s = RegexSolver(cfg, regex, cfg.targets)
     s.is_sat(cfg.targets[0])
     path = s.build_path(regex, Path())
+    print(path.path)
+    print(get_shortest_path(path))
     pass
