@@ -1,18 +1,40 @@
 // regex viz
 digraph alg {
 	0 [label=AND]
-	1 [label=AND]
-	2 [label=1]
-	1 -> 2
-	3 [label="+"]
-	4 [label=2]
-	3 -> 4
-	1 -> 3
+	1 [label=6]
 	0 -> 1
-	5 [label=OR]
-	6 [label=3]
+	2 [label=AND]
+	3 [label=OR]
+	4 [label="ε"]
+	3 -> 4
+	5 [label="+"]
+	6 [label=AND]
+	7 [label="3 5"]
+	6 -> 7
+	8 [label=AND]
+	9 [label=OR]
+	10 [label="ε"]
+	9 -> 10
+	11 [label="+"]
+	12 [label="4 5"]
+	11 -> 12
+	9 -> 11
+	8 -> 9
+	13 [label=6]
+	8 -> 13
+	6 -> 8
 	5 -> 6
-	7 [label="4 5"]
-	5 -> 7
-	0 -> 5
+	3 -> 5
+	2 -> 3
+	14 [label=AND]
+	15 [label=7]
+	14 -> 15
+	16 [label=OR]
+	17 [label="9 10"]
+	16 -> 17
+	18 [label="8 10"]
+	16 -> 18
+	14 -> 16
+	2 -> 14
+	0 -> 2
 }

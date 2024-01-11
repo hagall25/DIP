@@ -2,9 +2,11 @@ import json
 from z3 import *
 import parse
 import regex as re
+import tree
 import copy
 import networkx as nx
 from typing import Type
+
 
 pprint = True
 
@@ -687,10 +689,14 @@ if __name__ == "__main__":
     print(regex.toString())
     regex = re.substitude(regex)
     re.visualize(regex)
-    cfg.get_targets("PPC")
-    s = RegexSolver(cfg, regex, cfg.targets)
-    s.is_sat(cfg.targets[0])
-    path = s.build_path(regex, Path())
-    print(path.path)
-    print(get_shortest_path(path))
+    struct = tree.make_structure(regex)
+    for i in range(100):
+        next = struct.get_next()
+        print(next.value)
+    # cfg.get_targets("PPC")
+    # s = RegexSolver(cfg, regex, cfg.targets)
+    # s.is_sat(cfg.targets[0])
+    # path = s.build_path(regex, Path())
+    # print(path.path)
+    # print(get_shortest_path(path))
     pass

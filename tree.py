@@ -1,5 +1,8 @@
+import sys
 import regex as re
 import copy
+
+MAX = 1000000000
 
 def num_of_nodes(chain:str):
     if chain == '':
@@ -14,7 +17,10 @@ class Possibility:
         self.used = False
 
     def concat(self, b):
-        a= Possibility(self.value + " " + b.value)
+        if self.value == '' or b.value == '':
+            a = Possibility(self.value + b. value)
+        else :
+            a= Possibility(self.value + " " + b.value)
         return a
 
     def set_used(self):
@@ -32,19 +38,27 @@ class AndNode:
         self.lNode = None
         self.rNode = None
         self.last = None
+        self.queue = []
+        self.secondary = []
         
     def get_next(self):
+        if len(self.queue) > 0:
+            front = self.queue.pop(0)
+            self.last = front
+            ret = copy.deepcopy(front)
+            ret.used = False
+            return ret
         if not self.leftExhausted:
             if len(self.l) == 0 or self.l[-1].used:
                 val = self.lNode.get_next()
-                if len(self.l) == 0 or val.value != self.l[-1].value:
+                if len(self.l) == 0 or val.value not in [x.value for x in self.l]:
                     self.l.append(val)
                 else:
                     self.leftExhausted = True
         if not self.rightExhausted:
             if len(self.r) == 0 or self.r[-1].used:
                 val = self.rNode.get_next()
-                if len(self.r) == 0 or val.value != self.r[-1].value:
+                if len(self.r) == 0 or val.value not in [x.value for x in self.r]:
                     self.r.append(val)
                 else:
                     self.rightExhausted = True
@@ -55,27 +69,37 @@ class AndNode:
             ret = copy.deepcopy(self.last)
             ret.used = False
             return ret
-        res = None
-        to_set = None
+        
         if not self.l[-1].used:
-            for r in self.r:
+            if self.r[-1].used:
+                rcopy = self.r
+            else:
+                rcopy = self.r[:-1]
+            for r in rcopy:
                 if self.l[-1].length + r.length >= self.last.length:
-                    to_set = self.l[-1]
-                    if res == None:
-                        res = self.l[-1].concat(r)
-                    elif res.length > self.l[-1].length + r.length:
-                        res = self.l[-1].concat(r)
+                    self.secondary.append(self.l[-1].concat(r))
         if not self.r[-1].used:
             for l in self.l:
                 if l.length + self.r[-1].length >= self.last.length:
-                    to_set = self.r[-1]
-                    if res == None:
-                        res = l.concat(self.r[-1])
-                    elif res.length > l.length + self.r[-1].length:
-                        res = l.concat(self.r[-1])
-        if not res == None:
-            to_set.set_used()
-            ret = copy.deepcopy(res)
+                    self.secondary.append(l.concat(self.r[-1]))
+        if not self.secondary == []:
+            to_pop = 0
+            l = -1
+            for elem in sorted(self.secondary, key=lambda x: x.length):
+                if l == -1 or elem.length == l:
+                    l = elem.length
+                    to_pop += 1
+                    self.queue.append(elem)
+                else:
+                    break
+            self.secondary = sorted(self.secondary, key=lambda x: x.length)
+            for i in range(to_pop):
+                self.secondary.pop(0)
+            self.l[-1].set_used()
+            self.r[-1].set_used()
+            front = self.queue.pop(0)
+            self.last = front
+            ret = copy.deepcopy(front)
             ret.used = False
             return ret
         else:
@@ -94,14 +118,14 @@ class OrNode:
         if not self.leftExhausted:
             if len(self.l) == 0 or self.l[-1].used:
                 val = self.lNode.get_next()
-                if len(self.l) == 0 or val != self.l[-1]:
+                if len(self.l) == 0 or val.value not in [x.value for x in self.l]:
                     self.l.append(val)
                 else:
                     self.leftExhausted = True
         if not self.rightExhausted:
             if len(self.r) == 0 or self.r[-1].used:
                 val = self.rNode.get_next()
-                if len(self.r) == 0 or val != self.r[-1]:
+                if len(self.r) == 0 or val.value not in [x.value for x in self.l]:
                     self.r.append(val)
                 else:
                     self.rightExhausted = True
@@ -110,7 +134,7 @@ class OrNode:
                 self.l[-1].set_used()
                 ret = copy.deepcopy(self.l[-1])
                 ret.used = False
-                return copy.deepcopy(self.l[-1])
+                return ret
             else:
                 self.r[-1].set_used()
                 ret = copy.deepcopy(self.r[-1])
@@ -132,13 +156,25 @@ class OrNode:
             else:
                 return copy.deepcopy(self.l[-1])
             
-#TODO
-# def get_perm(possibilities, min, max, forbiden, curr):
-#     if curr.length >= min and curr.length < max and curr.value not in forbiden:
-#         return curr
-#     for pos in possibilities:
-        
-#         if pos 
+
+def get_perm(possibilities, min, max, forbiden, curr = Possibility('')):
+    forbiden_values = []
+    for elem in forbiden:
+        forbiden_values.append(elem.value)
+    if curr.length >= min and curr.length < max and curr.value not in forbiden_values:
+        return curr
+    elif curr.length >= max:
+        return None
+    next = None
+    for pos in possibilities:
+        temp = get_perm(possibilities, min, max,forbiden ,curr.concat(pos))
+        if next == None:
+            next = temp
+        elif temp == None:
+            pass
+        elif next.length > temp.length:
+            next = temp
+    return next
 
 class CycleNode:
     def __init__(self):
@@ -149,17 +185,31 @@ class CycleNode:
     
     def get_next(self):
         if not self.exhausted:
-            if self.arr[-1].used:
+            if len(self.arr) == 0 or self.arr[-1].used:
                 val = self.value.get_next()
-                if len(self.arr) == 0 or val != self.arr[-1]:
+                if len(self.arr) == 0 or val.value not in [x.value for x in self.arr]:
                     self.arr.append(val)
                 else:
-                    self.leftExhausted = True
-
-        
-        
-        self.last.append(self.arr[-1])
-        return copy.deepcopy(self.arr[-1])
+                    self.exhausted = True
+        max = sys.maxsize
+        if not self.arr[-1].used:
+            if not self.exhausted:
+                max = self.arr[-1].length
+        min = 1
+        if len(self.last)>0:
+            min = self.last[-1].length
+        if self.arr[-1].used:
+            a = get_perm(self.arr, min, max, self.last)
+        else:
+            a = get_perm(self.arr[:-1], min, max, self.last)
+        if a == None:            
+            self.last.append(self.arr[-1])
+            self.arr[-1].used = True
+        else:
+            self.last.append(a)
+        ret = copy.deepcopy(self.last[-1])
+        ret.used = False
+        return ret
 
 
 def make_structure(regex):
@@ -220,23 +270,19 @@ if __name__ == "__main__":
     three = re.Literal ('3')
     four = re.Literal ('4 5')
     five = re.Literal ('6 7 8')
-    rep = re.Alternation(two, five)
+    rep = re.Repetition(two, '+')
     con = re.Concatenation(one, rep)
     alt = re.Alternation(three, four)
     root = re.Concatenation(con, alt)
     struct = make_structure(root)
-    next = struct.get_next()
-    print_node(struct)
-    print(next.value)
-    next = struct.get_next()
-    print_node(struct)
-    print(next.value)
-    next = struct.get_next()
-    print_node(struct)
-    print(next.value)
-    next = struct.get_next()
-    print_node(struct)
-    print(next.value)
-    next = struct.get_next()
-    print_node(struct)
-    print(next.value)
+    for i in range(30):
+        next = struct.get_next()
+        print(next.value)
+    # next = struct.get_next()
+    # print(next.value)
+    # next = struct.get_next()
+    # print(next.value)
+    # next = struct.get_next()
+    # print(next.value)
+    # next = struct.get_next()
+    # print(next.value)
