@@ -191,7 +191,7 @@ class CFG:
                         a[(inode.name, jnode.name)] = re.union(a[(inode.name, jnode.name)], re.concat(a[(inode.name, node.name)], a[(node.name, jnode.name)]))
         #print(b[self.get_init_node().name].toString())
         #print_regex(b[self.get_init_node().name])
-        return b[self.get_init_node().name]
+        return re.Concatenation(re.Literal(self.get_init_node().name), b[self.get_init_node().name])
                     
 
     #load cfg from input json
@@ -507,10 +507,9 @@ class CFG:
         return sat.__str__()
 
     #Loads CFG, list of targets, find paths, make formule and solve it using z3
-    def solve (self, json, CC, method = "SP"):
+    def solve (self, json, CC, method = "PR"):
         self.load_from_json(json)
         #self.print_graph()
-        self.brzozowski()
         #self.get_regex()
         #self.print_graph()
         #self.cycle_paths(0)
@@ -521,7 +520,7 @@ class CFG:
                     self.bruteforce(100,50)
                 else:
                     break
-        else:
+        elif method == "PR":   #primitive
             paths = self.short_paths()
             for path in paths:
                 formula = self.get_formula(path)
@@ -536,6 +535,59 @@ class CFG:
                 self.solve_formula(formula)
                 if pprint:
                     print()
+        elif method == "FI":   #final
+            regex = self.brzozowski()
+            print(regex.toString())
+            regex = re.substitude(regex)   #a* -> Alternaion(eps, a+)
+            re.visualize(regex)
+            struct = tree.make_structure(regex)
+            for i in range(100):
+                next = struct.get_next()
+                print(next.value)
+                found = False
+                path = self.path_from_str(next.value)
+                
+                for target in self.targets:
+                    if is_subpath(path, target):
+                        found = True
+                        break
+                if found:
+                    formula = self.get_formula(path)
+                    symbs = parse.get_symbols(formula, self.symbols)
+                    for symb in symbs:
+                        if symb not in self.parameters:
+                            self.parameters[symb] = Int(symb)
+                    res = self.solve_formula(formula)
+                    if res == 'sat':
+                        print("Solved")
+                        #print(path)
+                        for target in self.targets.copy():
+                            if is_subpath(path, target):
+                                for n in target:
+                                    print(n.name, end = ' ')
+                                print()
+                                self.targets.remove(target)
+                        if len(self.targets) == 0:
+                            break
+                        print("Remaining:" + str(len(self.targets)))
+                        print()
+                else:
+                    print("No criterium to satisfy")
+            print("algo ended")
+            print("Criterions remaining:")
+            for t in self.targets:
+                for n in t:
+                    print(n.name, end = ' ')
+                print()
+
+
+    def path_from_str(self, str:str):
+        res = []
+        str_split = str.split(" ")
+        for node_name in str_split:
+            res.append(self.get_node(node_name))
+        return res
+
 
 class Decision:
     def __init__(self) -> None:
@@ -684,15 +736,16 @@ class RegexSolver:
 if __name__ == "__main__":
     cfg = CFG()
     #cfg.solve("json_problem2.json", "PPC", "BF")
-    cfg.load_from_json("json_problem2.json")
-    regex = cfg.brzozowski()
-    print(regex.toString())
-    regex = re.substitude(regex)
-    re.visualize(regex)
-    struct = tree.make_structure(regex)
-    for i in range(100):
-        next = struct.get_next()
-        print(next.value)
+    # cfg.load_from_json("json_problem2.json")
+    cfg.solve("json_problem2.json", "PPC", "FI")
+    # regex = cfg.brzozowski()
+    # print(regex.toString())
+    # regex = re.substitude(regex)
+    # re.visualize(regex)
+    # struct = tree.make_structure(regex)
+    # for i in range(100):
+    #     next = struct.get_next()
+    #     print(next.value)
     # cfg.get_targets("PPC")
     # s = RegexSolver(cfg, regex, cfg.targets)
     # s.is_sat(cfg.targets[0])

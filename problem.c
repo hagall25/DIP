@@ -1,7 +1,7 @@
 int foo(int a){
     int i = 0;
     while(a<3){
-        i++;
+        i = a*2+8/a + 2;
         a++;
     }
     if(i>2){

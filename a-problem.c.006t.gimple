@@ -1,0 +1,28 @@
+int foo (int a)
+{
+  int D.1952;
+  int i;
+
+  i = 0;
+  goto <D.1947>;
+  <D.1948>:
+  _1 = a * 2;
+  _2 = 8 / a;
+  _3 = _1 + _2;
+  i = _3 + 2;
+  a = a + 1;
+  <D.1947>:
+  if (a <= 2) goto <D.1948>; else goto <D.1946>;
+  <D.1946>:
+  if (i > 2) goto <D.1950>; else goto <D.1951>;
+  <D.1950>:
+  D.1952 = 1;
+  // predicted unlikely by early return (on trees) predictor.
+  return D.1952;
+  <D.1951>:
+  D.1952 = 0;
+  // predicted unlikely by early return (on trees) predictor.
+  return D.1952;
+}
+
+

@@ -1,0 +1,15 @@
+int foo (int a, int b)
+{
+  int D.1949;
+
+  if (a < b) goto <D.1947>; else goto <D.1948>;
+  <D.1947>:
+  D.1949 = a;
+  // predicted unlikely by early return (on trees) predictor.
+  return D.1949;
+  <D.1948>:
+  D.1949 = b;
+  return D.1949;
+}
+
+
