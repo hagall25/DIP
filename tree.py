@@ -4,6 +4,33 @@ import copy
 
 MAX = 1000000000
 
+MODE = 1
+CFG = None
+
+def set_cfg(cfg):
+    global CFG
+    CFG = cfg
+
+def get_node_len(node_name):
+    if MODE == 1:
+        return 1
+    if MODE == 2 and CFG != None:
+        l = CFG.get_node_length(node_name)
+        if l == 0:
+            return 1
+        else:
+            return l
+    else:
+        return 1
+def compute_length(chain:str):
+    if chain == '':
+        return 0
+    arr = chain.split(' ')
+    res = 0
+    for node_name in arr:
+        res += get_node_len(node_name)
+    return res
+
 def num_of_nodes(chain:str):
     if chain == '':
         return 0
@@ -13,14 +40,14 @@ def num_of_nodes(chain:str):
 class Possibility:
     def __init__(self, val: str):
         self.value = val
-        self.length = num_of_nodes(val)
+        self.length = compute_length(val)
         self.used = False
 
     def concat(self, b):
         if self.value == '' or b.value == '':
-            a = Possibility(self.value + b. value)
+            a = Possibility(self.value + b.value)
         else :
-            a= Possibility(self.value + " " + b.value)
+            a = Possibility(self.value + " " + b.value)
         return a
 
     def set_used(self):
@@ -125,7 +152,7 @@ class OrNode:
         if not self.rightExhausted:
             if len(self.r) == 0 or self.r[-1].used:
                 val = self.rNode.get_next()
-                if len(self.r) == 0 or val.value not in [x.value for x in self.l]:
+                if len(self.r) == 0 or val.value not in [x.value for x in self.r]:
                     self.r.append(val)
                 else:
                     self.rightExhausted = True
@@ -142,7 +169,7 @@ class OrNode:
                 return ret
         elif not self.l[-1].used:
             self.l[-1].set_used()
-            ret = copy.deepcopy(self.r[-1])
+            ret = copy.deepcopy(self.l[-1])
             ret.used = False
             return ret
         elif not self.r[-1].used:
@@ -263,6 +290,7 @@ def print_node(node, indent = 0):
         print_node(node.value, indent+1)
     if(isinstance(node, Possibility)):
         print("Posibility node with value: " + node.value)
+
 
 if __name__ == "__main__":
     one = re.Literal('1')

@@ -326,6 +326,13 @@ class CFG:
                     newPath.append(self.get_node(name))
                 self.targets.append(newPath)
 
+    def get_node_length(self, node_name):
+        res = 0
+        for node, action in self.actions:
+            if node == node_name:
+                res += 1
+        return res
+
     #Finds path from initial node to first node in targets subpath
     #and from last node in targets subpath and terminal node and concatenates those parts into one path.
     #Removes all subpaths from targets covered by this path.
@@ -502,8 +509,11 @@ class CFG:
         s = Solver()
         s.add(f)
         sat = s.check()
+        if sat.__str__() == 'sat':
+            m = s.model()  #do st with model
         #print(sat)
         solve(f)
+        
         return sat.__str__()
 
     #Loads CFG, list of targets, find paths, make formule and solve it using z3
@@ -540,6 +550,7 @@ class CFG:
             print(regex.toString())
             regex = re.substitude(regex)   #a* -> Alternaion(eps, a+)
             re.visualize(regex)
+            tree.set_cfg(self)
             struct = tree.make_structure(regex)
             for i in range(100):
                 next = struct.get_next()
