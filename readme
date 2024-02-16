@@ -1,0 +1,4 @@
+Příkaz ke spuštění:
+python3 ./graph.py
+
+V main se volá funkce solve, kde první argument je cesta k json souboru.

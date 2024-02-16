@@ -6,6 +6,7 @@ import tree
 import copy
 import networkx as nx
 from typing import Type
+import graphviz
 
 
 pprint = True
@@ -204,6 +205,10 @@ class CFG:
                     type = parameter["type"]
                     if type == "Int":
                         self.parameters[id] = Int(id)
+                    elif type == "Bool":
+                        self.parameters[id] = Bool(id)
+                    elif type == "Float" or type == "Double":
+                        self.parameters[id] = Real(id)
             if data["nodes"] != None:
                 for node in data["nodes"]:
                     newNode = Node(node["name"])
@@ -502,7 +507,7 @@ class CFG:
         return formula
     
     #Calls Z3 solve method
-    def solve_formula(self, formula):
+    def solve_formula(self, formula, print = True):
         for key in self.parameters:
             locals()[key] = self.parameters[key]
         f = eval(formula)
@@ -512,7 +517,8 @@ class CFG:
         if sat.__str__() == 'sat':
             m = s.model()  #do st with model
         #print(sat)
-        solve(f)
+        if print:
+            solve(f)
         
         return sat.__str__()
 
@@ -523,7 +529,22 @@ class CFG:
         #self.get_regex()
         #self.print_graph()
         #self.cycle_paths(0)
+        self.to_graph()
         self.get_targets(CC)
+        for t in self.targets:
+            formula = self.get_formula(t)
+            #print(">>", formula)
+            symbs = parse.get_symbols(formula, self.symbols)
+            for symb in symbs:
+                if symb not in self.parameters:
+                    self.parameters[symb] = Int(symb)
+            res = self.solve_formula(formula, False)
+            if res != 'sat':
+                print("Criterium [", end = ' ')
+                for n in t:
+                    print(n.name, end=' ')
+                print("] unsat, removing from targets")
+                self.targets.remove(t)
         if method == "BF":
             for i in range(len(self.targets)):
                 if self.targets != []:
@@ -585,11 +606,14 @@ class CFG:
                 else:
                     print("No criterium to satisfy")
             print("algo ended")
-            print("Criterions remaining:")
-            for t in self.targets:
-                for n in t:
-                    print(n.name, end = ' ')
-                print()
+            if len(self.targets) != 0:
+                print("Criterions remaining:")
+                for t in self.targets:
+                    for n in t:
+                        print(n.name, end = ' ')
+                    print()
+            else:
+                print("All criterions satisfied!")
 
 
     def path_from_str(self, str:str):
@@ -598,6 +622,22 @@ class CFG:
         for node_name in str_split:
             res.append(self.get_node(node_name))
         return res
+    
+    def to_graph(self):
+        dot = graphviz.Digraph('cfg', comment='regex viz cfg')
+        for n in self.nodes:
+            if n.terminal:
+                dot.node(str(n.name),str(n.name),shape="doublecircle")
+            elif n.initial:
+                dot.node(str(n.name),str(n.name),style = 'filled' ,fillcolor='#00ff00')
+            else:
+                dot.node(str(n.name),str(n.name))
+
+        for n in self.nodes:
+            for e in n.succs:
+                dot.edge(str(n.name),str(e))
+        dot.render(filename="img/cfg", format="png")
+
 
 
 class Decision:
@@ -672,95 +712,7 @@ def get_shortest_path(regex):
     else:
         return res[1:]
 
-class RegexSolver:
-    def __init__(self, graph:CFG, regex, targets):
-        self.graph = graph
-        self.regex = regex
-        self.targets = targets
-        self.cache = []
-        self.decisions_took = {}
-    
-    def is_sat(self,crit:[Node]):
-        formula = self.graph.get_formula(crit)
-        print(formula)
-        symbs = parse.get_symbols(formula, self.graph.symbols)
-        for symb in symbs:
-            if symb not in self.graph.parameters:
-                self.graph.parameters[symb] = Int(symb)
-        res = self.graph.solve_formula(formula)
-        if res == "sat":
-            return True
-        else: 
-            self.cache.append(crit)
-            return False
-        
-    def build_path(self, regex, res):
-        if isinstance(regex, re.Literal):
-            res.add_node(regex.value)
-            return res
-        if isinstance(regex, re.Concatenation):
-            left = self.build_path(regex.a, res)
-            right = self.build_path(regex.b, res)
-            return res
-        if isinstance(regex, re.Repetition):
-            rep = Cycle()
-            rep = self.build_path(regex.value, rep)
-            res.path.append(rep)
-            return res
-        if isinstance(regex, re.Alternation):
-            l = Path()
-            r = Path()
-            l= self.build_path(regex.a, l)
-            r= self.build_path(regex.b, r)
-            dec = Decision()
-            dec.a = l
-            dec.b = r
-            res.add_node(dec)
-            return dec
-
-
-    def find_shortest_prefix(self, to:Node, curr_node, path:list):
-        if isinstance(curr_node, re.Literal):
-            #if is to node, return?
-            #else
-            path += curr_node.value
-            return path
-        elif isinstance(curr_node, re.Concatenation):
-            path = self.find_shortest_prefix(to, curr_node.a, path)
-            path = self.find_shortest_prefix(to, curr_node.b, path)
-        elif isinstance(curr_node, re.Alternation):
-            tmp_path = path.copy()
-            path = self.find_shortest_prefix(to, curr_node.b, path)
-            if self.graph.reachable(self.graph.get_node(path[-1]), to):
-                self.decisions_took[path] = 'a'
-            else:
-                path = tmp_path
-                path = self.find_shortest_prefix(to, curr_node.b, path)
-                if self.graph.reachable(self.graph.get_node(path[-1]), to):
-                    self.decisions_took[path] = 'b'
-                else:
-                    print("Ani jedna dobre :D")
-        pass
-
-
-
 if __name__ == "__main__":
     cfg = CFG()
-    #cfg.solve("json_problem2.json", "PPC", "BF")
-    # cfg.load_from_json("json_problem2.json")
     cfg.solve("json_problem2.json", "PPC", "FI")
-    # regex = cfg.brzozowski()
-    # print(regex.toString())
-    # regex = re.substitude(regex)
-    # re.visualize(regex)
-    # struct = tree.make_structure(regex)
-    # for i in range(100):
-    #     next = struct.get_next()
-    #     print(next.value)
-    # cfg.get_targets("PPC")
-    # s = RegexSolver(cfg, regex, cfg.targets)
-    # s.is_sat(cfg.targets[0])
-    # path = s.build_path(regex, Path())
-    # print(path.path)
-    # print(get_shortest_path(path))
     pass

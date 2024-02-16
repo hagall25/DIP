@@ -392,7 +392,7 @@ def visualize(regex):
     label = 0
     dot = graphviz.Digraph('alg', comment='regex viz')
     add_nodes(dot, regex)
-    dot.render()
+    dot.render(filename="img/tree",format="png")
     #print(dot.source)
 
 if __name__ == "__main__":
