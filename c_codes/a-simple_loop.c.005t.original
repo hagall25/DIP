@@ -1,0 +1,15 @@
+
+;; Function foo (null)
+;; enabled by -tree-original
+
+
+{
+  goto <D.1946>;
+  <D.1947>:;
+  a++ ;
+  <D.1946>:;
+  if (a <= 2 && a > 0) goto <D.1947>; else goto <D.1945>;
+  <D.1945>:;
+  return a;
+}
+

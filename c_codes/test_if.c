@@ -1,6 +1,6 @@
 int foo (int a){
     if(a<3){
-        if(a<2){
+        if((a<2 && a >0) || a == -1){
             return 1;
         } else {
             return 2;

@@ -9,6 +9,7 @@
 import sys
 from pyparsing import *
 import numpy
+import predicate
 
 ppc = pyparsing_common
 
@@ -62,6 +63,12 @@ expr = infixNotation(
         (eqop, 2, opAssoc.LEFT)
     ],
 )
+
+def isPredicate(flatten):
+    for atom in flatten:
+        if atom == boolop:
+            return True
+    return False
 
 def getAssignment(flatten_expr):
     return flatten_expr[2:]
@@ -123,32 +130,55 @@ def get_symbols(expression, symbols):
     res = symb(parsed)
     return res
 
+def make_struct(flatten):
+    ret = None
+    while flatten[1] == boolop:
+        if flatten[1] == "||":
+            ret = predicate.LogicalOr(make_struct(flatten[0]), make_struct(flatten[2]))
+        elif flatten[1] == "&&":
+            ret = predicate.LogicalAnd(make_struct(flatten[0]), make_struct(flatten[2]))
+        flatten = flatten[2:].insert(0, ret)
+    if ret == None:
+        ret = flatten
+    return ret
+    
 
-#test = [
-#    "a = a + 1",
-#    "Not(a <= 2)",
-#    "a = a + 2",
-#    "a < 2",
-#    "9 + 2 * 3",
-#    "(9 + 2) * 3",
-#    "(9 + -2) * 3",
-#    "(9 + -2) * 3^2^2",
-#    "(9! + -2) * 3^2^2",
-#    "M*X + B",
-#    "M*(X + B)",
-#    "1+2*-3^4*5+-+-6",
-#    "(a + b)",
-#    "((a + b))",
-#    "(((a + b)))",
-#    "((((a + b))))",
-#    "((((((((((((((a + b))))))))))))))",
-#]
+def process_predicate(predicate):
+    a = expr.parseString(predicate)
+    flatten = a.asList()[0]
+    if not isPredicate(flatten):
+        return predicate
+    else:
+        a = make_struct(flatten)
+    print(flatten)
+    pass
 
-#symbols = {'a':'a'}
-#for t in test:
-#    print(t)
-#    a = expr.parseString(t)
-#    e, symbols = parse_expr(a, symbols)
-#    print(symbols)
-#    print(toStr(e))
-#    print("")
+test = [
+   "a = a + 1",
+   "Not(a <= 2)",
+   "a = a + 2",
+   "a < 2",
+   "9 + 2 * 3",
+   "(9 + 2) * 3",
+   "(9 + -2) * 3",
+   "(9 + -2) * 3^2^2",
+   "(9! + -2) * 3^2^2",
+   "M*X + B",
+   "M*(X + B)",
+   "1+2*-3^4*5+-+-6",
+   "(a + b)",
+   "((a + b))",
+   "(((a + b)))",
+   "((((a + b))))",
+   "((((((((((((((a + b))))))))))))))",
+]
+
+# symbols = {'a':'a'}
+# for t in test:
+    # print(t)
+    # a = expr.parseString(t)
+    # e, symbols = parse_expr(a, symbols)
+    # print(symbols)
+    # print(toStr(e))
+    # print("")
+process_predicate("((a < b) || (c > d)) && (b>a) && (a>0)")

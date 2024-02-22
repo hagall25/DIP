@@ -1,0 +1,51 @@
+
+;; Function foo (foo, funcdef_no=0, decl_uid=1943, cgraph_uid=1, symbol_order=0)
+
+
+Analyzing function body size: foo/0
+
+IPA function summary for foo/0
+  global time:     7.000000
+  self size:       8
+  global size:     8
+  min size:       0
+  self stack:      0
+  global stack:    0
+    size:6.000000, time:7.000000
+    size:2.000000, time:0.000000,  executed if:(not inlined)
+  calls:
+
+int foo (int a)
+{
+  int D.1950;
+  int _4;
+
+  <bb 2> :
+  goto <bb 4>; [INV]
+
+  <bb 3> :
+  a_3 = a_1 + 1;
+
+  <bb 4> :
+  # a_1 = PHI <a_2(D)(2), a_3(3)>
+  if (a_1 <= 2)
+    goto <bb 5>; [INV]
+  else
+    goto <bb 6>; [INV]
+
+  <bb 5> :
+  if (a_1 > 0)
+    goto <bb 3>; [INV]
+  else
+    goto <bb 6>; [INV]
+
+  <bb 6> :
+  _4 = a_1;
+
+  <bb 7> :
+<L4>:
+  return _4;
+
+}
+
+

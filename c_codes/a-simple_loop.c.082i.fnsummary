@@ -1,0 +1,45 @@
+Symbol table:
+
+foo/0 (foo) @0x7fa486e38000
+  Type: function definition analyzed
+  Visibility: force_output externally_visible no_reorder public
+  References: 
+  Referring: 
+  Availability: available
+  Function flags: body
+  Called by: 
+  Calls: 
+int foo (int a)
+{
+  int D.1950;
+  int _4;
+
+  <bb 2> :
+  goto <bb 4>; [INV]
+
+  <bb 3> :
+  a_3 = a_1 + 1;
+
+  <bb 4> :
+  # a_1 = PHI <a_2(D)(2), a_3(3)>
+  if (a_1 <= 2)
+    goto <bb 5>; [INV]
+  else
+    goto <bb 6>; [INV]
+
+  <bb 5> :
+  if (a_1 > 0)
+    goto <bb 3>; [INV]
+  else
+    goto <bb 6>; [INV]
+
+  <bb 6> :
+  _4 = a_1;
+
+  <bb 7> :
+<L4>:
+  return _4;
+
+}
+
+
