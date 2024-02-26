@@ -22,11 +22,11 @@
             "succs": [
                 {
                     "name":"3",
-                    "condition": "a <= 2"
+                    "condition": "(a <= 2) && (a>0)"
                 },
                 {
                     "name": "5",
-                    "condition": "Not(a <= 2)"
+                    "condition": "Not((a <= 2) && (a>0))"
                 }
             ]
         },

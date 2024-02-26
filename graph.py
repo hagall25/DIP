@@ -7,6 +7,7 @@ import copy
 import networkx as nx
 from typing import Type
 import graphviz
+import predicate
 
 
 pprint = True
@@ -88,6 +89,7 @@ class CFG:
         self.actions = []
         self.parameters = {}
         self.symbols = {}
+        self.mcdc_target = {}
     
     def add_node(self, node):
         if not node in self.nodes:
@@ -488,7 +490,7 @@ class CFG:
     #From given path makes formula to check by Z3
     #For assignments update variables with values in symbols and update values in symbols.
     #For conditions update variables with values in symbols and add to formula
-    def get_formula(self, path):
+    def get_formula(self, path, clear = True):
         formula = ""
         first = True
         for i in range(len(path)-1):
@@ -503,8 +505,47 @@ class CFG:
                 expr, sym = parse.parse(self.conditions[edge], self.symbols)
                 formula += expr
                 first = False
-        self.symbols.clear()
+        if clear:
+            self.symbols.clear()
         return formula
+    
+    def get_formula_mcdc(self, path):
+        ii = 0
+        formula = ""
+        res = []
+        for previous, current in zip(path, path[1:]):
+            if (previous.name, current.name) in self.conditions:
+                #print(path[:ii])
+                pre_form = self.get_formula(path[:ii+1], False)
+                edge = (previous.name, current.name)
+
+                combs = parse.process_predicate(self.conditions[edge])
+                in_forms = []
+                for comb in combs:
+                    f = ''
+                    first = True
+                    for key, val in comb.items():
+                        if not first:
+                            f+=', '
+                        if val:
+                            f+= '(' + key + ')'
+                        else:
+                            f+= "Not(" + key + ")"
+                        first = False
+                    f, sym = parse.parse(f, self.symbols)
+                    in_forms.append(f)
+                post_form = self.get_formula(path[ii+1:])
+                for in_form in in_forms:
+                    formula = ''
+                    if pre_form != '':
+                        formula += pre_form +', '
+                    formula += in_form
+                    if post_form != '':
+                        formula += ', ' + post_form
+                    res.append((edge, formula))
+                self.symbols.clear()
+            ii += 1
+        return res
     
     #Calls Z3 solve method
     def solve_formula(self, formula, print = True):
@@ -530,6 +571,8 @@ class CFG:
         #self.print_graph()
         #self.cycle_paths(0)
         self.to_graph()
+        
+
         self.get_targets(CC)
         for t in self.targets:
             formula = self.get_formula(t)
@@ -578,7 +621,21 @@ class CFG:
                 print(next.value)
                 found = False
                 path = self.path_from_str(next.value)
-                
+                if CC == 'MCDC':
+                    print("Normal:")
+                    print(self.get_formula(path))
+                    print("MCDC :")
+                    print(self.get_formula_mcdc(path))
+                    mcdc = self.get_formula_mcdc(path)
+                    for edge, formula in mcdc:
+                        symbs = parse.get_symbols(formula, self.symbols)
+                        for symb in symbs:
+                            if symb not in self.parameters:
+                                self.parameters[symb] = Int(symb)
+                        if edge in self.decisions.keys:
+                            res = self.solve_formula(formula)
+                        
+                    continue
                 for target in self.targets:
                     if is_subpath(path, target):
                         found = True
@@ -714,5 +771,5 @@ def get_shortest_path(regex):
 
 if __name__ == "__main__":
     cfg = CFG()
-    cfg.solve("json_problem2.json", "PPC", "FI")
+    cfg.solve("json_simple_loop.json", "MCDC", "FI")
     pass

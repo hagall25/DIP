@@ -131,27 +131,47 @@ def get_symbols(expression, symbols):
     return res
 
 def make_struct(flatten):
+    if isinstance(flatten, predicate.LogicalAnd) or isinstance(flatten, predicate.LogicalOr) or isinstance(flatten, predicate.LogicalNot):
+        return flatten
+    i = 0
+    for atom in flatten:
+        if atom == neqop:
+            n = predicate.LogicalNot(make_struct(flatten[i+1]))
+            new = flatten
+            new = new[:i]
+            new.append(n)
+            new = new + flatten[i+2:]
+            flatten = new
+        i+=1
+    if len(flatten) < 2:
+        return flatten[0]
+
+    
     ret = None
     while flatten[1] == boolop:
         if flatten[1] == "||":
             ret = predicate.LogicalOr(make_struct(flatten[0]), make_struct(flatten[2]))
         elif flatten[1] == "&&":
             ret = predicate.LogicalAnd(make_struct(flatten[0]), make_struct(flatten[2]))
-        flatten = flatten[2:].insert(0, ret)
+        flatten = flatten[3:]
+        flatten.insert(0, ret)
+        if len(flatten) < 2:
+            break
     if ret == None:
-        ret = flatten
+        if not isinstance(flatten, predicate.LogicalNot):
+            ret = ''
+            for s in flatten:
+                ret+=str(s)
+        else:
+            ret = flatten
     return ret
-    
 
-def process_predicate(predicate):
-    a = expr.parseString(predicate)
+def process_predicate(predicatee):
+    a = expr.parseString(predicatee)
     flatten = a.asList()[0]
-    if not isPredicate(flatten):
-        return predicate
-    else:
-        a = make_struct(flatten)
-    print(flatten)
-    pass
+    a = make_struct(flatten)
+    res = predicate.eval_combs(a)
+    return res
 
 test = [
    "a = a + 1",
@@ -181,4 +201,4 @@ test = [
     # print(symbols)
     # print(toStr(e))
     # print("")
-process_predicate("((a < b) || (c > d)) && (b>a) && (a>0)")
+process_predicate("(a < b) || (a>1)")
