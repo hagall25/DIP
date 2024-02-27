@@ -76,6 +76,29 @@ def getAssignment(flatten_expr):
 def isAssignment(flatten_expr):
     return flatten_expr[1] == '='
 
+def inToPos(flatten):
+    l = []
+    ii = 0
+    for atom in flatten:
+        if isinstance(atom, list):
+            atom =  inToPos(atom)
+            flatten[ii] = atom
+        ii+=1
+    while(len(flatten)>2):
+        for i in range(len(flatten)-2):
+            if flatten[i+1] == 'Or' or flatten[i+1] == '||':
+                flatten =  flatten[:i] + ['Or'] + [[flatten[i]]  + [',']+ [inToPos(flatten[i+2:])]]
+                break
+        break
+    return flatten
+
+
+def toPrefixOr(strexpr):
+    a = expr.parseString(strexpr)
+    flatten = a.asList()[0]
+    flatten = inToPos(flatten)
+    return toStr(flatten)
+
 #Replace all variables with values in symbols
 def replaceSymbols(expression, symbols):
     for i, op in enumerate(expression):
@@ -107,6 +130,7 @@ def parse_expr(expr, symbols):
     else:
         flatten = replaceSymbols(flatten, symbols)
     return flatten, symbols
+
 
 def parse(expression, symbols):
     a = expr.parseString(expression)
@@ -159,18 +183,34 @@ def make_struct(flatten):
             break
     if ret == None:
         if not isinstance(flatten, predicate.LogicalNot):
-            ret = ''
-            for s in flatten:
-                ret+=str(s)
+            ret = toStr(flatten)
+            # for s in flatten.toStr():
+            #     ret+=str(s)
         else:
             ret = flatten
     return ret
 
-def process_predicate(predicatee):
+def process_predicate(predicatee, symbols):
+    predicatee, s = parse(predicatee, symbols)
     a = expr.parseString(predicatee)
     flatten = a.asList()[0]
     a = make_struct(flatten)
     res = predicate.eval_combs(a)
+    
+    return res
+
+def remove_or(predicatee):
+    a = expr.parseString(predicatee)
+    flatten = a.asList()[0]
+    a = make_struct(flatten)
+    res = predicate.make_formula_t(a, '')
+    return res
+
+def generate_mcdc(predicatee):
+    a = expr.parseString(predicatee)
+    flatten = a.asList()[0]
+    a = make_struct(flatten)
+    res = predicate.generate_coverage(a)
     return res
 
 test = [
@@ -201,4 +241,4 @@ test = [
     # print(symbols)
     # print(toStr(e))
     # print("")
-process_predicate("(a < b) || (a>1)")
+#process_predicate("(a < b) || (a>1)")

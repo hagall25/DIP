@@ -503,6 +503,7 @@ class CFG:
                 if not first:
                     formula += ", "
                 expr, sym = parse.parse(self.conditions[edge], self.symbols)
+                expr = parse.remove_or(expr)
                 formula += expr
                 first = False
         if clear:
@@ -519,38 +520,47 @@ class CFG:
                 pre_form = self.get_formula(path[:ii+1], False)
                 edge = (previous.name, current.name)
 
-                combs = parse.process_predicate(self.conditions[edge])
-                in_forms = []
-                for comb in combs:
-                    f = ''
-                    first = True
-                    for key, val in comb.items():
-                        if not first:
-                            f+=', '
-                        if val:
-                            f+= '(' + key + ')'
-                        else:
-                            f+= "Not(" + key + ")"
-                        first = False
-                    f, sym = parse.parse(f, self.symbols)
-                    in_forms.append(f)
+                in_forms = parse.process_predicate(self.conditions[edge], self.symbols)
+                
+                # in_forms = []
+                # for comb in combs:
+                #     f = ''
+                #     first = True
+                #     for key, val in comb.items():
+                #         if not first:
+                #             f+=', '
+                #         if val:
+                #             f+= '(' + key + ')'
+                #         else:
+                #             f+= "Not(" + key + ")"
+                #         first = False
+                #     f, sym = parse.parse(f, self.symbols)
+                #     in_forms.append(f)
+                
                 post_form = self.get_formula(path[ii+1:])
-                for in_form in in_forms:
+                for in_form, c in in_forms:
+                    if previous.name in self.mcdc_target:
+                        if c not in self.mcdc_target[previous.name]:
+                            break
                     formula = ''
                     if pre_form != '':
                         formula += pre_form +', '
                     formula += in_form
                     if post_form != '':
                         formula += ', ' + post_form
-                    res.append((edge, formula))
+                    res.append((edge, formula, c))
                 self.symbols.clear()
             ii += 1
         return res
     
     #Calls Z3 solve method
-    def solve_formula(self, formula, print = True):
+    def solve_formula(self, formula, printe = True):
         for key in self.parameters:
             locals()[key] = self.parameters[key]
+        formula = formula.replace("&&", ",")
+        #print(formula)
+        #formula = parse.toPrefixOr(formula)
+        #print(formula)
         f = eval(formula)
         s = Solver()
         s.add(f)
@@ -558,7 +568,7 @@ class CFG:
         if sat.__str__() == 'sat':
             m = s.model()  #do st with model
         #print(sat)
-        if print:
+        if printe:
             solve(f)
         
         return sat.__str__()
@@ -571,7 +581,10 @@ class CFG:
         #self.print_graph()
         #self.cycle_paths(0)
         self.to_graph()
-        
+        if CC == 'MCDC':
+            for key, item in self.conditions.items():
+                fr, to = key
+                self.mcdc_target[fr] = parse.generate_mcdc(item)
 
         self.get_targets(CC)
         for t in self.targets:
@@ -624,16 +637,22 @@ class CFG:
                 if CC == 'MCDC':
                     print("Normal:")
                     print(self.get_formula(path))
+                    #res = self.solve_formula(self.get_formula(path))
                     print("MCDC :")
-                    print(self.get_formula_mcdc(path))
+                    #print(self.get_formula_mcdc(path))
                     mcdc = self.get_formula_mcdc(path)
-                    for edge, formula in mcdc:
-                        symbs = parse.get_symbols(formula, self.symbols)
-                        for symb in symbs:
-                            if symb not in self.parameters:
-                                self.parameters[symb] = Int(symb)
-                        if edge in self.decisions.keys:
+
+                    for edge, formula, c in mcdc:
+                        if edge in self.conditions:
+                            print(formula)
                             res = self.solve_formula(formula)
+                            if res == 'sat':
+                                fr, to = edge
+                                self.mcdc_target[fr].remove(c)
+                                if self.mcdc_target[fr] == []:
+                                    self.mcdc_target.pop(fr)
+                                if not self.mcdc_target:
+                                    return
                         
                     continue
                 for target in self.targets:
@@ -771,5 +790,5 @@ def get_shortest_path(regex):
 
 if __name__ == "__main__":
     cfg = CFG()
-    cfg.solve("json_simple_loop.json", "MCDC", "FI")
+    cfg.solve("json_problem.json", "MCDC", "FI")
     pass

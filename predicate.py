@@ -65,6 +65,55 @@ def assign_vals(predicate, queue, map):
         map[predicate] = queue.pop(0)
         return (queue, map)
 
+def make_formula(predicate, queue, str):
+    if isinstance(predicate, LogicalAnd):
+        str+='And('
+        queue, str = make_formula(predicate.l, queue, str)
+        str += ','
+        queue, str = make_formula(predicate.r, queue, str)
+        str+=')'
+        return (queue, str)
+    if isinstance(predicate, LogicalOr):
+        str+='Or('
+        queue, str = make_formula(predicate.l, queue, str)
+        str+= ','
+        queue, str = make_formula(predicate.r, queue, str)
+        str+=')'
+        return (queue, str)
+    if isinstance(predicate, LogicalNot):
+        str+='Not('
+        queue, str = make_formula(predicate.op, queue, str)
+        str+=')'
+        return (queue, str)
+    else:
+        if queue.pop(0):
+            str += '(' + predicate + ')'
+        else:
+            str += 'Not(' + predicate + ')'
+        return (queue, str)
+    
+def make_formula_t(predicate, str):
+    if isinstance(predicate, LogicalAnd):
+        str = make_formula_t(predicate.l, str)
+        str += ', '
+        str = make_formula_t(predicate.r, str)
+        return str
+    if isinstance(predicate, LogicalOr):
+        str+='Or('
+        str = make_formula_t(predicate.l, str)
+        str+= ','
+        str = make_formula_t(predicate.r, str)
+        str+=')'
+        return str
+    if isinstance(predicate, LogicalNot):
+        str+='Not('
+        str = make_formula_t(predicate.op, str)
+        str+=')'
+        return str
+    else:
+        str += '(' + predicate + ')'
+        return str
+
 def eval_combs(predicate):
     n = num_clauses(predicate)
     combinations = generate_combinations(n)
@@ -81,12 +130,35 @@ def eval_combs(predicate):
     #print(res)
     res2 = []
     for r in res:
-        q, m = assign_vals(predicate, r, {})
-        res2.append(m)
+        c = copy.deepcopy(r)
+        #s = '('
+        s = ''
+        q, s = make_formula(predicate,r,s)
+        #s += ')'
+        #print(s)
+        res2.append((s,c))
+        #q, m = assign_vals(predicate, r, {})
+        
+        #res2.append(m)
         #print(m)
     return res2
     print(comb, end="")
     print(evaluate(predicate, comb))
+
+def generate_coverage(predicate):
+    n = num_clauses(predicate)
+    combinations = generate_combinations(n)
+    res = []
+    for comb in copy.deepcopy(combinations):
+        for i in range(n):
+            e1 = evaluate(predicate, copy.deepcopy(comb))[0]
+            comb[i] = not comb[i]
+            e2 = evaluate(predicate, copy.deepcopy(comb))[0]
+            comb[i] = not comb[i]
+            if e1 != e2:
+                if comb not in res:
+                    res.append(comb)
+    return res
 
 # # Example usage:
 # input_number = 3
