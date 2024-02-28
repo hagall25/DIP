@@ -22,7 +22,7 @@ def get_node_len(node_name):
             return l
     else:
         return 1
-def compute_length(chain:str):
+def compute_length(chain: str):
     if chain == '':
         return 0
     arr = chain.split(' ')
@@ -31,7 +31,7 @@ def compute_length(chain:str):
         res += get_node_len(node_name)
     return res
 
-def num_of_nodes(chain:str):
+def num_of_nodes(chain: str):
     if chain == '':
         return 0
     arr = chain.split(' ')

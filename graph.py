@@ -539,9 +539,11 @@ class CFG:
                 
                 post_form = self.get_formula(path[ii+1:])
                 for in_form, c in in_forms:
-                    if previous.name in self.mcdc_target:
-                        if c not in self.mcdc_target[previous.name]:
+                    if edge in self.mcdc_target:
+                        if c not in self.mcdc_target[edge]:
                             break
+                    else:
+                        break
                     formula = ''
                     if pre_form != '':
                         formula += pre_form +', '
@@ -583,9 +585,8 @@ class CFG:
         self.to_graph()
         if CC == 'MCDC':
             for key, item in self.conditions.items():
-                fr, to = key
-                self.mcdc_target[fr] = parse.generate_mcdc(item)
-
+                self.mcdc_target[key] = parse.generate_mcdc(item)
+        print(self.mcdc_target)
         self.get_targets(CC)
         for t in self.targets:
             formula = self.get_formula(t)
@@ -635,24 +636,26 @@ class CFG:
                 found = False
                 path = self.path_from_str(next.value)
                 if CC == 'MCDC':
-                    print("Normal:")
-                    print(self.get_formula(path))
-                    #res = self.solve_formula(self.get_formula(path))
-                    print("MCDC :")
-                    #print(self.get_formula_mcdc(path))
                     mcdc = self.get_formula_mcdc(path)
-
                     for edge, formula, c in mcdc:
                         if edge in self.conditions:
-                            print(formula)
                             res = self.solve_formula(formula)
                             if res == 'sat':
-                                fr, to = edge
-                                self.mcdc_target[fr].remove(c)
-                                if self.mcdc_target[fr] == []:
-                                    self.mcdc_target.pop(fr)
-                                if not self.mcdc_target:
-                                    return
+                                #print(formula)
+                                if edge in self.mcdc_target:
+                                    if c in self.mcdc_target[edge]:
+                                        self.mcdc_target[edge].remove(c)
+                                        print("Satisfied: ", end=' ')
+                                        print(edge, end=": ")
+                                        print(c)
+                                        if self.mcdc_target[edge] == []:
+                                            self.mcdc_target.pop(edge)
+                                        if not self.mcdc_target:
+                                            print("All criterions satisfied!")
+                                            return
+                                        print("Remaining:")
+                                        print(self.mcdc_target)
+                                        print()
                         
                     continue
                 for target in self.targets:
@@ -790,5 +793,5 @@ def get_shortest_path(regex):
 
 if __name__ == "__main__":
     cfg = CFG()
-    cfg.solve("json_problem.json", "MCDC", "FI")
+    cfg.solve("json_simple_loop.json", "MCDC", "FI")
     pass

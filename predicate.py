@@ -94,9 +94,11 @@ def make_formula(predicate, queue, str):
     
 def make_formula_t(predicate, str):
     if isinstance(predicate, LogicalAnd):
+        str+='And('
         str = make_formula_t(predicate.l, str)
         str += ', '
         str = make_formula_t(predicate.r, str)
+        str+=')'
         return str
     if isinstance(predicate, LogicalOr):
         str+='Or('
@@ -124,26 +126,22 @@ def eval_combs(predicate):
             comb[i] = not comb[i]
             e2 = evaluate(predicate, copy.deepcopy(comb))[0]
             comb[i] = not comb[i]
-            if e1 != e2:
+            if (e1 != e2) and e1:
                 if comb not in res:
                     res.append(comb)
-    #print(res)
     res2 = []
     for r in res:
         c = copy.deepcopy(r)
-        #s = '('
         s = ''
-        q, s = make_formula(predicate,r,s)
-        #s += ')'
-        #print(s)
+        s = make_formula_t(predicate,s)
+        q, val = assign_vals(predicate, r, {})
+        for k, v in val.items():
+            if v:
+                s += ', (' + k + ')'
+            else:
+                s += ', Not(' + k + ')'
         res2.append((s,c))
-        #q, m = assign_vals(predicate, r, {})
-        
-        #res2.append(m)
-        #print(m)
     return res2
-    print(comb, end="")
-    print(evaluate(predicate, comb))
 
 def generate_coverage(predicate):
     n = num_clauses(predicate)
@@ -155,7 +153,7 @@ def generate_coverage(predicate):
             comb[i] = not comb[i]
             e2 = evaluate(predicate, copy.deepcopy(comb))[0]
             comb[i] = not comb[i]
-            if e1 != e2:
+            if (e1 != e2) and e1:
                 if comb not in res:
                     res.append(comb)
     return res

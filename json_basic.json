@@ -18,11 +18,11 @@
             "succs": [
                 {
                     "name": "3",
-                    "condition": "(a < b) && (b>0) && (a>0)"
+                    "condition": "(a < 10) && (b>0) && (a>0)"
                 },
                 {
                     "name": "4",
-                    "condition": "Not((a < b) && (b>0) && (a>0))"
+                    "condition": "Not((a < 10) && (b>0) && (a>0))"
                 }
             ]
         },
